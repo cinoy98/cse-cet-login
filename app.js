@@ -1,39 +1,57 @@
-const express       = require('express');
-const bodyParser    = require('body-parser');
-const cookieSession = require('cookie-session');
-const cookieParser  = require('cookie-parser');
-const urllib        = require('url');
-const path          = require('path');
-const crypto        = require('crypto');
-
-const config        = require('./config');
-const defaultroutes = require('./routes/default');
-const passwordauth  = require('./routes/password');
-const webuathnauth  = require('./routes/webauthn.js');
-
-const app           = express();
-
+const express = require("express");
+const app = express();
+const fido = require('./fido.js');
+const bodyParser = require('body-parser');
+const enforce = require('express-sslify');
+const cors = require("cors");
+// if (process.env.ENFORCE_SSL_HEROKU === "true") {
+//     app.use(enforce.HTTPS({ trustProtoHeader: true }));
+// } else if (process.env.ENFORCE_SSL_AZURE === "true") {
+//     app.use(enforce.HTTPS({ trustAzureHeader: true }));
+// }
+app.use(cors());
+app.use(express.static('public'));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-/* ----- session ----- */
-app.use(cookieSession({
-  name: 'session',
-  keys: [crypto.randomBytes(32).toString('hex')],
 
-  // Cookie Options
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
-}))
-app.use(cookieParser())
+app.get('/challenge', async (req, res) => {
+    try {
+        const challenge = await fido.getChallenge();
+        res.json({
+            result: challenge
+        });
+    } catch (e) {
+        res.json({
+            error: e.message
+        });
+    };
+});
 
-/* ----- serve static ----- */
-app.use(express.static(path.join(__dirname, 'static')));
+app.put('/credentials', async (req, res) => {
+    try {
+        const credential = await fido.makeCredential(req.body);
+        res.json({
+            result: credential
+        });
+    } catch (e) {
+        res.json({
+            error: e.message
+        });
+    }
+});
 
-app.use('/', defaultroutes)
-app.use('/password', passwordauth)
-app.use('/webauthn', webuathnauth)
+app.put('/assertion', async (req, res) => {
+    try {
+        const credential = await fido.verifyAssertion(req.body);
+        res.json({
+            result: credential
+        });
+    } catch (e) {
+        res.json({
+            error: e.message
+        });
+    }
+});
 
-const port = process.env.PORT || 3000;
-app.listen(port);
-console.log(`Started app on port ${port}`);
-
-module.exports = app;
+app.listen(process.env.PORT || 3000, () => console.log('App launched.'));
