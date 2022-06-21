@@ -4,11 +4,11 @@ const fido = require('./fido.js');
 const bodyParser = require('body-parser');
 const enforce = require('express-sslify');
 const cors = require("cors");
-// if (process.env.ENFORCE_SSL_HEROKU === "true") {
-//     app.use(enforce.HTTPS({ trustProtoHeader: true }));
-// } else if (process.env.ENFORCE_SSL_AZURE === "true") {
-//     app.use(enforce.HTTPS({ trustAzureHeader: true }));
-// }
+if (process.env.ENFORCE_SSL_HEROKU === "true") {
+    app.use(enforce.HTTPS({ trustProtoHeader: true }));
+} else if (process.env.ENFORCE_SSL_AZURE === "true") {
+    app.use(enforce.HTTPS({ trustAzureHeader: true }));
+}
 app.use(cors());
 app.use(express.static('public'));
 app.use(bodyParser.json());
